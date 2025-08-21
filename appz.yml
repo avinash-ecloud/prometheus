@@ -1,7 +1,6 @@
 app:
     name: prometheus
     code: prometheus
-   
 
 build:
     version: 2.17
@@ -26,5 +25,5 @@ volumes:
     
   
 properties:
-    revision : 96
+    revision : 01
     
