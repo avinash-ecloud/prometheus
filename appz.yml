@@ -10,7 +10,7 @@ build:
     image_template: prometheus-2.45
 
 deploy:
-    context: alpha/DEV
+    context: avinash-ecloud/DEV
     type: statefulset
     replicas: 1
     port:
