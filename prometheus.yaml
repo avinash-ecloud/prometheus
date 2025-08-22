@@ -3,6 +3,8 @@ global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
   # scrape_timeout is set to the global default (10s).
+  external_labels:
+    datacenter: primary
 
 # Alertmanager configuration
 alerting:
@@ -23,17 +25,6 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
     - targets: ['localhost:9090']
-  - job_name: 'graylog'
-    scrape_interval: 15s
-    metrics_path: '/api/plugins/org.graylog.plugins.metrics.prometheus/metrics'
-    basic_auth:
-      username: admin
-      password: 4FTZOx9ACdbAw65WJH1u
-    # Optional TLS configuration; see https://prometheus.io/docs/operating/configuration/#<tls_config>
-    #tls_config:
-    static_configs:
-      - targets: ['appz.1276c99e.lowtouch.cloud:443/logs.alpha-dev/']
-      
   - job_name: 'node-exporter'
     static_configs:
     - targets: ['10.0.1.237:9100','10.0.2.26:9100']
@@ -46,18 +37,6 @@ scrape_configs:
         regex: 'k8s.(.*)'
         target_label: nodename
         replacement: appz-${1}
-      - source_labels: ['nodename']
-        regex: 'ip-192-168-103-189.us-east-2.compute.internal'
-        target_label: nodename
-        replacement: appz-qa-worker-1
-      - source_labels: ['nodename']
-        regex: 'ip-192-168-163-143.us-east-2.compute.internal'
-        target_label: nodename
-        replacement: appz-qa-worker-2
-      - source_labels: ['nodename']
-        regex: 'ip-192-168-130-193.us-east-2.compute.internal'
-        target_label: nodename
-        replacement: appz-prod-worker-1 
   - job_name: 'kube-state-metrics'
     static_configs:
     - targets: ['kube-state-metrics.kube-system.svc.cluster.local:8080']
@@ -79,4 +58,60 @@ scrape_configs:
       target_label: __metrics_path__
       replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
       
- 
+  - job_name: 'mongodb_exporter'
+    kubernetes_sd_configs:
+    - role: endpoints
+    
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: namespace
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: pod
+
+    - source_labels: [pod]
+      regex: '((.*)mongo(.*))'
+      action: keep   
+
+    - source_labels: [__address__]
+      target_label: __address__
+      regex: '([^:]+)(:[27017]+)?'
+      replacement: '${1}'
+      action: drop
+      
+    - source_labels: [__address__]
+      regex: '.*'
+      target_label: instance
+      replacement: 'AppZ${1}'
+      
+  - job_name: 'log-exporter'
+    static_configs:
+    - targets: ['clicklessauth-8-0.bajaj-prod3:8000']
+    
+  - job_name: 'redis'
+    kubernetes_sd_configs:
+    - role: endpoints
+    
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_namespace]
+      action: replace
+      target_label: namespace
+    - source_labels: [__meta_kubernetes_pod_name]
+      action: replace
+      target_label: pod
+
+    - source_labels: [pod]
+      regex: redis.*
+      action: keep   
+
+    - source_labels: [__address__]
+      target_label: __address__
+      regex: '([^:]+)(:[6379]+)?'
+      replacement: '${1}'
+      action: drop
+      
+    - source_labels: [__address__]
+      regex: '.*'
+      target_label: instance
+      replacement: 'AppZ${1}'
